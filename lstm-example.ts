@@ -1,16 +1,15 @@
 import * as tf from "@tensorflow/tfjs-node-gpu"
+import * as Path from "path"
 import * as fs from 'fs'
 
 //const CHAR_SET_SIZE = 85;
-const LSTM_LAYER_SIZE = 32;
-const SAMPLE_LENGTH = 128;
-const SAMPLE_STEP = SAMPLE_LENGTH;
-const NUM_EPOCS = 1;
-const NUM_ERA  = 5;
-const BATCH_SIZE = 512 ;
+const SAMPLE_LENGTH = 32;
+const NUM_EPOCS = 50;
+const BATCH_SIZE = 256 ;
 const LENGTH = 128;
 const TEMPERATURE = 0.05;
 const EXAMPLES_PER_EPOC = 10;
+const MODEL_PATH = `file://./${SAMPLE_LENGTH}_${BATCH_SIZE}`;
 
 (async () => {
 
@@ -24,14 +23,6 @@ const EXAMPLES_PER_EPOC = 10;
     const chars = corpus
     const charmap = {} // a map of characters -> indexes
 
-    // extract the tokens seen in the corpus into the charmap
-    // const charset = chars.reduce((r,v) => {
-    //     if(charmap[v]) return r
-    //     let i = r.length
-    //     charmap[v] = i
-    //     r[i] = v
-    //     return r
-    // },[]) 
     console.log("creating charset")
     let charset = []
     for(let c of corpus) {
@@ -39,18 +30,14 @@ const EXAMPLES_PER_EPOC = 10;
         charmap[c] = charset.length
         charset.push(c)
     }
-    console.log("charset created")
+    console.log("//charset created//////////////")
 
-    // FIXME don't use a js array for this
-    // This is temporary as we work out the logic
-    // Probably works now, definately fix it next. We are getting a heap error
     const trainingData =  tf.buffer([chars.length,SAMPLE_LENGTH,charset.length])
     const labelData = tf.buffer([chars.length,charset.length])
-    
-    console.log("generating training data")
-    for(let i = 0; i < chars.length ; i++) {
 
-        let timeSlice = []
+    console.log("generating training data")
+
+    for(let i = 0; i < chars.length ; i++) {
         for(let j = 0; j < SAMPLE_LENGTH; j++) {
             let k = charmap[chars[i+j]]
             trainingData.set(1,i,j,k)
@@ -59,30 +46,39 @@ const EXAMPLES_PER_EPOC = 10;
     }
     console.log("training data generated")
 
-    // define the models layer structure
-    const model = tf.sequential();
-    const lstm1 = tf.layers.lstm({
-        units: LSTM_LAYER_SIZE,
-        inputShape: [SAMPLE_LENGTH, charset.length],
-        returnSequences: true,
-    });
 
-    const lstm2 = tf.layers.lstm({
-        units: LSTM_LAYER_SIZE,
-        returnSequences: false,
-    });
+    let model ;
+    try {
+        model = await tf.loadLayersModel(MODEL_PATH)
+    } catch(err) {
+        // define the models layer structure
+        model = tf.sequential();
+        const lstm1 = tf.layers.lstm({
+            units: charset.length,
+            inputShape: [SAMPLE_LENGTH, charset.length],
+            returnSequences: true,
+        });
 
-    const optimizer = tf.train.rmsprop(0.05);
+        const lstm2 = tf.layers.lstm({
+            units: charset.length,
+            inputShape: [SAMPLE_LENGTH, charset.length],
+            returnSequences: false,
+        });
+
+        const optimizer = tf.train.rmsprop(0.05);
 
 
-    model.add(lstm1);
-    //model.add(lstm2);
-    model.add(tf.layers.dense({ units: charset.length, activation: 'softmax' }));
+        model.add(lstm1);
+        model.add(lstm2);
+        model.add(tf.layers.dense({ units: charset.length, activation: 'softmax' }));
 
-    model.compile({ optimizer: optimizer, loss: 'categoricalCrossentropy' });
+        model.compile({ optimizer: optimizer, loss: 'categoricalCrossentropy' });
+
+        await model.save(MODEL_PATH)
+    }
 
     const xs = trainingData.toTensor()
-    const ys = trainingData.toTensor()
+    const ys = labelData.toTensor()
 
     await model.fit(xs, ys, {
         epochs: NUM_EPOCS,
@@ -92,6 +88,8 @@ const EXAMPLES_PER_EPOC = 10;
 
     xs.dispose();
     ys.dispose();
+
+    await model.save(MODEL_PATH)
     function sample(probs: tf.Tensor, temperature: number) {
         return tf.tidy(() => {
             const logits = <tf.Tensor1D>tf.div(tf.log(probs), Math.max(temperature, 1e-6));
@@ -138,5 +136,5 @@ const EXAMPLES_PER_EPOC = 10;
         input.dispose();
         output.dispose();
     }
-    console.log(generated)
+    console.log("generated text:",generated)
 })()
