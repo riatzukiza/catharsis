@@ -1,14 +1,13 @@
-
 import * as tf from "@tensorflow/tfjs-node-gpu"
 import * as fs from 'fs'
 
 //const CHAR_SET_SIZE = 85;
-const LSTM_LAYER_SIZE = 128;
+const LSTM_LAYER_SIZE = 32;
 const SAMPLE_LENGTH = 128;
 const SAMPLE_STEP = SAMPLE_LENGTH;
 const NUM_EPOCS = 1;
-const NUM_ERA  = 1;
-const BATCH_SIZE = 128 ;
+const NUM_ERA  = 5;
+const BATCH_SIZE = 512 ;
 const LENGTH = 128;
 const TEMPERATURE = 0.05;
 const EXAMPLES_PER_EPOC = 10;
