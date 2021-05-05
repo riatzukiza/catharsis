@@ -5,7 +5,11 @@
   "main": "text-data.js",
   "dependencies": {
     "@tensorflow/tfjs-node-gpu": "^3.6.1",
-    "nanotimer": "^0.3.15"
+    "@types/twitter": "^1.7.0",
+    "discord.js": "^12.5.3",
+    "dotenv": "^8.2.0",
+    "nanotimer": "^0.3.15",
+    "twitter": "^1.7.1"
   },
   "devDependencies": {},
   "scripts": {
