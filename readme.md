@@ -48,3 +48,14 @@ An account represents credentials to access a social media platform assuming a s
 
 A language model is a basis for creating words, and navigating thoughts, in a way that is transmissable. It allows personas to share state 
 with each another.
+
+
+# Some important commands 
+
+```
+docker build --tag tfjs-gpu .
+docker run -it --rm tfjs-gpu --volume $CWD:/app
+docker run -it --gpus=all --rm --volume ${PWD}:/app tfjs-gpu
+
+
+```
