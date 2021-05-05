@@ -4,11 +4,14 @@ import * as fs from 'fs'
 
 //const CHAR_SET_SIZE = 85;
 const SAMPLE_LENGTH = 32;
-const NUM_EPOCS = 50;
-const BATCH_SIZE = 256 ;
+const NUM_EPOCS = 100;
+const BATCH_SIZE = 128 ;
 const LENGTH = 128;
 const TEMPERATURE = 0.05;
-const EXAMPLES_PER_EPOC = 10;
+// const EXAMPLES_PER_EPOC = 10;
+// const LSTM_LAYER_COUNT = 5;
+// const ACTIVATION_LAYERS = 2;
+// const MODEL_PATH = `file://./${SAMPLE_LENGTH}_${BATCH_SIZE}_${LSTM_LAYER_COUNT}_${ACTIVATION_LAYERS}`;
 const MODEL_PATH = `file://./${SAMPLE_LENGTH}_${BATCH_SIZE}`;
 
 (async () => {
@@ -47,12 +50,17 @@ const MODEL_PATH = `file://./${SAMPLE_LENGTH}_${BATCH_SIZE}`;
     console.log("training data generated")
 
 
+    const optimizer = tf.train.rmsprop(0.05);
     let model ;
     try {
-        model = await tf.loadLayersModel(MODEL_PATH)
+        console.log("loading model")
+        model = await tf.loadLayersModel(MODEL_PATH+"/model.json")
+        model.compile({ optimizer: optimizer, loss: 'categoricalCrossentropy' });
     } catch(err) {
+        console.log("failed to load model, generating new one",err)
         // define the models layer structure
         model = tf.sequential();
+
         const lstm1 = tf.layers.lstm({
             units: charset.length,
             inputShape: [SAMPLE_LENGTH, charset.length],
@@ -65,15 +73,32 @@ const MODEL_PATH = `file://./${SAMPLE_LENGTH}_${BATCH_SIZE}`;
             returnSequences: false,
         });
 
-        const optimizer = tf.train.rmsprop(0.05);
+        const innerLSTMLayers = []
+        // for(let i = 0; i < LSTM_LAYER_COUNT-1; i++) {
+        //     innerLSTMLayers.push(
+        //         tf.layers.lstm({
+        //             units: charset.length,
+        //             inputShape: [SAMPLE_LENGTH, charset.length],
+        //             returnSequences: (i < LSTM_LAYER_COUNT-1),
+        //         })) ;
+        // }
+
 
 
         model.add(lstm1);
         model.add(lstm2);
+        // for(let layer of innerLSTMLayers) {
+        //     model.add(layer);
+        // }
+
         model.add(tf.layers.dense({ units: charset.length, activation: 'softmax' }));
+        // for(let i = 0; i < ACTIVATION_LAYERS; i++) {
+        //     model.add(tf.layers.dense({ units: charset.length, activation: 'softmax' }));
+        // }
 
         model.compile({ optimizer: optimizer, loss: 'categoricalCrossentropy' });
 
+        console.log("Saving Model")
         await model.save(MODEL_PATH)
     }
 
@@ -83,7 +108,7 @@ const MODEL_PATH = `file://./${SAMPLE_LENGTH}_${BATCH_SIZE}`;
     await model.fit(xs, ys, {
         epochs: NUM_EPOCS,
         batchSize: BATCH_SIZE,
-        stepsPerEpoch: EXAMPLES_PER_EPOC
+        //stepsPerEpoch: EXAMPLES_PER_EPOC
     });
 
     xs.dispose();
