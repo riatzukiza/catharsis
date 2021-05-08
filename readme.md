@@ -56,6 +56,4 @@ with each another.
 docker build --tag tfjs-gpu .
 docker run -it --rm tfjs-gpu --volume $CWD:/app
 docker run -it --gpus=all --rm --volume ${PWD}:/app tfjs-gpu
-
-
 ```
